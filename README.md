@@ -15,6 +15,7 @@ Production-ready бот на **Python 3.10+**, **aiogram 3** и **SQLite**. Пр
 - [Переменные окружения](#переменные-окружения)
 - [Запуск](#запуск)
 - [Docker](#docker)
+- [CI: образ в GHCR и деплой по SSH](#ci-образ-в-ghcr-и-деплой-по-ssh)
 - [Команды бота](#команды-бота)
 - [Структура репозитория](#структура-репозитория)
 - [База данных](#база-данных)
@@ -133,6 +134,23 @@ docker compose down
 
 Данные заявок сохраняются в томе; `docker compose down` **без** флага `-v` том не удаляет. Переменная `DATABASE_URL` в `docker-compose.yml` переопределяет значение из `.env` для пути к БД в контейнере.
 
+Файл **`docker-compose.deploy.yml`** — вариант для сервера без исходников: подтягивается только образ из реестра (см. [CI](#ci-образ-в-ghcr-и-деплой-по-ssh)).
+
+---
+
+## CI: образ в GHCR и деплой по SSH
+
+Workflow: [`.github/workflows/build-and-deploy.yml`](.github/workflows/build-and-deploy.yml).
+
+- При пуше в **`main`** (и вручную через **Actions → Run workflow**) собирается Docker-образ, публикуется в **GitHub Container Registry** (`ghcr.io/<владелец>/<репозиторий>:latest` и тег с SHA).
+- Вторая джоба подключается по **SSH** к серверу, выполняет `docker login` (при необходимости), `docker compose -f docker-compose.deploy.yml pull` и `up -d`.
+
+**Секреты** в настройках репозитория GitHub → *Secrets and variables* → *Actions*: см. комментарий в начале YAML. Кратко: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`, `GHCR_USERNAME`, `GHCR_READ_TOKEN` (PAT с правом `read:packages` для приватного пакета; для публичного образа можно оставить пустым и при желании убрать шаг `docker login` на сервере вручную).
+
+На сервере в каталоге `DEPLOY_PATH` должны быть **`docker-compose.deploy.yml`** (как в репозитории) и **`.env`** с `BOT_TOKEN` и остальными переменными. Пользователь SSH должен иметь право запускать `docker compose`.
+
+Пакет в GHCR после первого успешного запуска может быть **приватным** — тогда без `GHCR_READ_TOKEN` на сервере pull не сработает. При необходимости сделайте пакет публичным: страница пакета на GitHub → *Package settings* → *Change visibility*.
+
 ---
 
 ## Команды бота
@@ -164,6 +182,8 @@ docker compose down
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-compose.deploy.yml
+├── .github/workflows/
 ├── .env.example
 └── README.md
 ```
