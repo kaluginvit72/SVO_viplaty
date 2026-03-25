@@ -4,7 +4,7 @@
 #   SSH_HOST              — хост сервера (IP или домен)
 #   SSH_USER              — пользователь SSH
 #   SSH_PRIVATE_KEY       — приватный ключ (весь PEM, включая BEGIN/END)
-#   DEPLOY_PATH           — каталог на сервере: .env, docker-compose.deploy.yml (из репозитория), доступ docker
+#   DEPLOY_PATH           — каталог на сервере: обязателен .env; docker-compose.deploy.yml подтянется с raw.githubusercontent.com, если файла нет (репо должно быть публичным)
 #   GHCR_USERNAME         — логин GitHub для docker login на сервере (часто совпадает с владельцем образа)
 #   GHCR_READ_TOKEN       — PAT с правом read:packages (для приватного образа обязателен; для публичного тоже удобен)
 #
@@ -97,8 +97,13 @@ jobs:
             DEPLOY_PATH="$(printf '%s' "$DEPLOY_PATH" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
             test -d "$DEPLOY_PATH" || { echo "Нет каталога: [$DEPLOY_PATH]"; ls -la /opt || true; exit 1; }
             cd "$DEPLOY_PATH"
-            test -f docker-compose.deploy.yml || { echo "Нет docker-compose.deploy.yml"; exit 1; }
-            test -f .env || { echo "Нет .env"; exit 1; }
+            if [ ! -f docker-compose.deploy.yml ]; then
+              echo "docker-compose.deploy.yml нет в каталоге — скачиваю из GitHub (нужен публичный репозиторий)..."
+              curl -fsSL -o docker-compose.deploy.yml \
+                "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose.deploy.yml" \
+                || { echo "Не удалось скачать compose (приватный репо или нет curl) — положите docker-compose.deploy.yml вручную"; exit 1; }
+            fi
+            test -f .env || { echo "Нет .env — создайте на сервере из .env.example"; exit 1; }
             export APP_IMAGE="${IMAGE}:latest"
             if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${GHCR_USER:-}" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
