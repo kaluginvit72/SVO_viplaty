@@ -83,28 +83,22 @@ jobs:
       - name: Run remote deploy
         uses: appleboy/ssh-action@v1.2.0
         env:
-          IMAGE: ${{ needs.build-and-push.outputs.image }}
           GHCR_USER: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          IMAGE: ghcr.io/kaluginvit72/svo_viplaty
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: IMAGE,GHCR_USER,GHCR_TOKEN,DEPLOY_PATH
+          envs: GHCR_USER,GHCR_TOKEN,IMAGE
           script: |
             set -euo pipefail
-            test -n "${DEPLOY_PATH:-}" || { echo "DEPLOY_PATH empty"; exit 1; }
-            # убрать пробелы/переносы из секрета GitHub
+            DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}'
             DEPLOY_PATH="$(printf '%s' "$DEPLOY_PATH" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-            if [ ! -d "$DEPLOY_PATH" ]; then
-              echo "Каталог DEPLOY_PATH не существует на сервере: $DEPLOY_PATH"
-              echo "Создайте каталог на сервере под этим путём и положите docker-compose.deploy.yml и .env"
-              exit 1
-            fi
+            test -d "$DEPLOY_PATH" || { echo "Нет каталога: [$DEPLOY_PATH]"; ls -la /opt || true; exit 1; }
             cd "$DEPLOY_PATH"
-            test -f docker-compose.deploy.yml || { echo "Нет файла docker-compose.deploy.yml в $DEPLOY_PATH"; exit 1; }
-            test -f .env || { echo "Нет файла .env в $DEPLOY_PATH"; exit 1; }
+            test -f docker-compose.deploy.yml || { echo "Нет docker-compose.deploy.yml"; exit 1; }
+            test -f .env || { echo "Нет .env"; exit 1; }
             export APP_IMAGE="${IMAGE}:latest"
             if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${GHCR_USER:-}" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
