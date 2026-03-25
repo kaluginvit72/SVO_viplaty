@@ -7,8 +7,9 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-import aiosqlite
 from aiogram.fsm.storage.base import BaseStorage, StorageKey
+
+from app.db.session import aconnect
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class SqliteFSMStorage(BaseStorage):
     async def set_state(self, key: StorageKey, state: Any = None) -> None:
         k = _key_str(key)
         state_sql = _state_to_str(state)
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             cur = await conn.execute("SELECT data FROM fsm_storage WHERE key = ?", (k,))
             row = await cur.fetchone()
             raw = row[0] if row else "{}"
@@ -67,14 +68,14 @@ class SqliteFSMStorage(BaseStorage):
 
     async def get_state(self, key: StorageKey) -> Optional[str]:
         k = _key_str(key)
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             cur = await conn.execute("SELECT state FROM fsm_storage WHERE key = ?", (k,))
             row = await cur.fetchone()
             return row[0] if row else None
 
     async def set_data(self, key: StorageKey, data: dict[str, Any]) -> None:
         k = _key_str(key)
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             cur = await conn.execute("SELECT state FROM fsm_storage WHERE key = ?", (k,))
             row = await cur.fetchone()
             state = row[0] if row else None
@@ -89,7 +90,7 @@ class SqliteFSMStorage(BaseStorage):
 
     async def get_data(self, key: StorageKey) -> dict[str, Any]:
         k = _key_str(key)
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             cur = await conn.execute("SELECT data FROM fsm_storage WHERE key = ?", (k,))
             row = await cur.fetchone()
             if not row or not row[0]:

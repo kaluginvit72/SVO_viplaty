@@ -73,9 +73,9 @@ WT_MAP = {"w1": 1, "w2": 2, "w4": 4, "w6": 6}
 
 @router.callback_query(StateFilter(Q.choose_scenario), F.data.startswith("sc:"))
 async def pick_scenario(call: CallbackQuery, state: FSMContext, repo: LeadRepository) -> None:
-    await call.answer()
     if not call.from_user or not call.message:
         return
+    await call.answer()
     uid = call.from_user.id
     u = call.from_user
     await repo.delete_incomplete(uid)

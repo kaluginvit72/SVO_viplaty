@@ -33,6 +33,7 @@ async def step_documents(call: CallbackQuery, state: FSMContext, repo: LeadRepos
         await call.answer()
         return
 
+    await call.answer("Ок")
     docs = list(data.get("selected_documents") or [])
     s = set(docs)
     if raw in s:
@@ -40,6 +41,5 @@ async def step_documents(call: CallbackQuery, state: FSMContext, repo: LeadRepos
     else:
         s.add(raw)
     await state.update_data(selected_documents=sorted(s))
-    await call.answer("Ок")
     await show_step(call.message, state, Q.documents)
     await _persist(state, repo, uid)

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import aiosqlite
 
+from app.db.session import aconnect
+
 log = logging.getLogger(__name__)
 
 SCHEMA = """
@@ -54,8 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_tg_completed ON leads(telegram_user_id, com
 
 async def init_db(db_path: Path) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(db_path) as conn:
-        await conn.execute("PRAGMA journal_mode=WAL;")
+    async with aconnect(db_path) as conn:
         await conn.executescript(SCHEMA)
         await conn.commit()
     log.info("База данных готова: %s", db_path)

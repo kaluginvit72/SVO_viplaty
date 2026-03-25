@@ -19,6 +19,7 @@ Production-ready бот на **Python 3.10+**, **aiogram 3** и **SQLite**. Пр
 - [Команды бота](#команды-бота)
 - [Структура репозитория](#структура-репозитория)
 - [База данных](#база-данных)
+- [Тесты сценариев (pytest)](#тесты-сценариев-pytest)
 - [Проверка воронки](#проверка-воронки)
 - [Деплой и миграции](#деплой-и-миграции)
 
@@ -184,6 +185,7 @@ Workflow: [`.github/workflows/build-and-deploy.yml`](.github/workflows/build-and
 ├── docker-compose.yml
 ├── docker-compose.deploy.yml
 ├── .github/workflows/
+├── tests/
 ├── .env.example
 └── README.md
 ```
@@ -200,6 +202,19 @@ Workflow: [`.github/workflows/build-and-deploy.yml`](.github/workflows/build-and
 - Таблица **`leads`** — поля анкеты, контакты, флаги согласия и завершения, `wizard_state` для восстановления UI.
 
 Индекс: `idx_leads_tg_completed` по `(telegram_user_id, completed)`.
+
+---
+
+## Тесты сценариев (pytest)
+
+Проверяются цепочки «Назад» для веток **впервые** / **уже подали**, форма лида, рендер экрана результата и скорость цикла записи в SQLite:
+
+```bash
+pip install -r requirements.txt
+pytest tests/test_scenarios.py -v
+```
+
+В Telegram скорость шагов в основном задаётся сетью до API; в коде ускорены ответ на колбэки документов и настройки SQLite (WAL + `synchronous=NORMAL` + `busy_timeout`).
 
 ---
 

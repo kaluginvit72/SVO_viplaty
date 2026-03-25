@@ -11,6 +11,7 @@ from typing import Any
 import aiosqlite
 
 from app.db.models import LeadRecord
+from app.db.session import aconnect
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class LeadRepository:
         self._path = db_path
 
     async def delete_incomplete(self, telegram_user_id: int) -> None:
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             await conn.execute(
                 "DELETE FROM leads WHERE telegram_user_id = ? AND completed = 0",
                 (telegram_user_id,),
@@ -32,8 +33,7 @@ class LeadRepository:
             await conn.commit()
 
     async def get_incomplete(self, telegram_user_id: int) -> LeadRecord | None:
-        async with aiosqlite.connect(self._path) as conn:
-            conn.row_factory = aiosqlite.Row
+        async with aconnect(self._path, row_factory=aiosqlite.Row) as conn:
             cur = await conn.execute(
                 """
                 SELECT * FROM leads
@@ -54,7 +54,7 @@ class LeadRepository:
         scenario: str,
     ) -> int:
         now = _utc()
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             cur = await conn.execute(
                 """
                 INSERT INTO leads (
@@ -96,7 +96,7 @@ class LeadRepository:
         vals.append(_utc())
         vals.append(telegram_user_id)
         q = f"UPDATE leads SET {', '.join(cols)} WHERE telegram_user_id = ? AND completed = 0"
-        async with aiosqlite.connect(self._path) as conn:
+        async with aconnect(self._path) as conn:
             await conn.execute(q, vals)
             await conn.commit()
 
