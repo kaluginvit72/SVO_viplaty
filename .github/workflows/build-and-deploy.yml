@@ -95,7 +95,16 @@ jobs:
           script: |
             set -euo pipefail
             test -n "${DEPLOY_PATH:-}" || { echo "DEPLOY_PATH empty"; exit 1; }
+            # убрать пробелы/переносы из секрета GitHub
+            DEPLOY_PATH="$(printf '%s' "$DEPLOY_PATH" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            if [ ! -d "$DEPLOY_PATH" ]; then
+              echo "Каталог DEPLOY_PATH не существует на сервере: $DEPLOY_PATH"
+              echo "Создайте каталог на сервере под этим путём и положите docker-compose.deploy.yml и .env"
+              exit 1
+            fi
             cd "$DEPLOY_PATH"
+            test -f docker-compose.deploy.yml || { echo "Нет файла docker-compose.deploy.yml в $DEPLOY_PATH"; exit 1; }
+            test -f .env || { echo "Нет файла .env в $DEPLOY_PATH"; exit 1; }
             export APP_IMAGE="${IMAGE}:latest"
             if [ -n "${GHCR_TOKEN:-}" ] && [ -n "${GHCR_USER:-}" ]; then
               echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
