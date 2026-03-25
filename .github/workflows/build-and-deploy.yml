@@ -67,6 +67,17 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      - name: Проверка секретов SSH
+        run: |
+          missing=""
+          [ -z "${{ secrets.SSH_HOST }}" ] && missing="${missing} SSH_HOST"
+          [ -z "${{ secrets.SSH_USER }}" ] && missing="${missing} SSH_USER"
+          [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && missing="${missing} SSH_PRIVATE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Задайте секреты в Settings → Secrets → Actions:$missing"
+            exit 1
+          fi
+
       - name: Run remote deploy
         uses: appleboy/ssh-action@v1.2.0
         env:
