@@ -67,14 +67,16 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Проверка секретов SSH
+      - name: Проверка секретов (SSH + деплой)
         run: |
           missing=""
           [ -z "${{ secrets.SSH_HOST }}" ] && missing="${missing} SSH_HOST"
           [ -z "${{ secrets.SSH_USER }}" ] && missing="${missing} SSH_USER"
           [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && missing="${missing} SSH_PRIVATE_KEY"
+          [ -z "${{ secrets.DEPLOY_PATH }}" ] && missing="${missing} DEPLOY_PATH"
           if [ -n "$missing" ]; then
             echo "::error::Задайте секреты в Settings → Secrets → Actions:$missing"
+            echo "::notice::DEPLOY_PATH — абсолютный путь на сервере, где лежат .env и docker-compose.deploy.yml (например /opt/svo-viplaty)"
             exit 1
           fi
 
