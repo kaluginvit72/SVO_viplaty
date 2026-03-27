@@ -15,6 +15,7 @@ from app.handlers.render import show_step
 from app.repositories.lead_repository import LeadRepository
 from app.services import formatter
 from app.services import lead_service
+from app.services import webhook_lead
 from app.states.questionnaire import QuestionnaireStates as Q
 from app.texts import messages
 from app.utils.phone import normalize_phone
@@ -162,21 +163,29 @@ async def consent_yes(
     }
     await lead_service.save_completed_lead(repo, uid, finalize_fields)
 
+    admin_payload = {
+        **data,
+        "telegram_user_id": uid,
+        "lead_name": finalize_fields["lead_name"],
+        "phone": finalize_fields["phone"],
+        "normalized_phone": finalize_fields["normalized_phone"],
+        "contact_method": finalize_fields["contact_method"],
+        "comment": finalize_fields["comment"],
+        "pdn_consent": True,
+        "base_total": finalize_fields["base_total"],
+        "personal_share": finalize_fields["personal_share"],
+        "child_monthly_payment_applicable": finalize_fields["child_monthly_payment_applicable"],
+        "estimated_lost_income": finalize_fields["estimated_lost_income"],
+    }
+
+    if settings.lead_webhook_url:
+        await webhook_lead.post_lead_completed(
+            settings.lead_webhook_url,
+            settings.lead_webhook_secret,
+            admin_payload,
+        )
+
     if settings.admin_chat_id:
-        admin_payload = {
-            **data,
-            "telegram_user_id": uid,
-            "lead_name": finalize_fields["lead_name"],
-            "phone": finalize_fields["phone"],
-            "normalized_phone": finalize_fields["normalized_phone"],
-            "contact_method": finalize_fields["contact_method"],
-            "comment": finalize_fields["comment"],
-            "pdn_consent": True,
-            "base_total": finalize_fields["base_total"],
-            "personal_share": finalize_fields["personal_share"],
-            "child_monthly_payment_applicable": finalize_fields["child_monthly_payment_applicable"],
-            "estimated_lost_income": finalize_fields["estimated_lost_income"],
-        }
         try:
             await bot.send_message(
                 settings.admin_chat_id,

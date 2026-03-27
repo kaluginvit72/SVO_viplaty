@@ -43,6 +43,8 @@ async def _run() -> None:
 
     if settings.admin_chat_id is None:
         log.warning("ADMIN_CHAT_ID не задан — уведомления о заявках отключены")
+    if settings.lead_webhook_url:
+        log.info("LEAD_WEBHOOK_URL задан — завершённые заявки дублируются POST JSON")
 
     log.info("Бот запущен")
     await dp.start_polling(bot)

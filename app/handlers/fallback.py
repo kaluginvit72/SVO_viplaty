@@ -10,6 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.states.questionnaire import QuestionnaireStates as Q
+from app.states.quiz_flow import QuizFlowStates as Z
 from app.texts import messages
 
 log = logging.getLogger(__name__)
@@ -31,6 +32,8 @@ TEXT_EXPECTING_STATES = (
     Q.lead_phone,
     Q.lead_contact,
     Q.lead_comment,
+    Z.lead_name,
+    Z.lead_phone,
 )
 
 
@@ -46,6 +49,7 @@ async def wrong_content_type(message: Message) -> None:
 @router.message(
     ~StateFilter(None),
     ~StateFilter(Q.choose_scenario),
+    ~StateFilter(Z.question),
     ~StateFilter(*TEXT_EXPECTING_STATES),
     F.chat.type == "private",
     F.text,

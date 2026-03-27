@@ -14,6 +14,8 @@ def scenario_choice() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [InlineKeyboardButton(text="Узнать, какие выплаты положены", callback_data="sc:first")],
             [InlineKeyboardButton(text="Получить консультацию", callback_data="sc:filed")],
+            [InlineKeyboardButton(text="Прояснить ситуацию", callback_data="qz:clarify")],
+            [InlineKeyboardButton(text="Рассчитать выплаты", callback_data="qz:calc")],
         ]
     )
 
