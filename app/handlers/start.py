@@ -48,19 +48,13 @@ async def cmd_start(
         return
 
     record = await repo.get_incomplete(uid)
+    resume_later = False
     if record and record.wizard_state and record.scenario:
         st = state_from_key(record.wizard_state)
         if st and st != Q.choose_scenario:
-            merged = progress_service.restore_fsm_from_lead(record)
-            merged.update(meta)
-            await state.set_data(merged)
-            await state.set_state(st)
-            await show_step(message, state, st)
-            await _sync(state, repo, uid)
-            log.info("Восстановлен прогресс user=%s state=%s", uid, record.wizard_state)
-            return
+            resume_later = True
 
-    await state.update_data(**meta)
+    await state.update_data(**meta, draft_resume_available=resume_later)
     await state.set_state(Q.choose_scenario)
     await show_step(message, state, Q.choose_scenario)
     await _sync(state, repo, uid)

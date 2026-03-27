@@ -14,7 +14,7 @@ from app.texts import messages
 
 def _keyboard_for(state: State, data: dict) -> InlineKeyboardMarkup | None:
     if state == Q.choose_scenario:
-        return kb.scenario_choice()
+        return kb.scenario_choice(show_resume=bool(data.get("draft_resume_available")))
     if state == Q.deceased:
         return kb.deceased_status()
     if state == Q.applicant:
@@ -53,8 +53,9 @@ def _keyboard_for(state: State, data: dict) -> InlineKeyboardMarkup | None:
 async def show_step(anchor: Message, state: FSMContext, st: State) -> None:
     data = await state.get_data()
     if st == Q.choose_scenario:
-        text = messages.welcome()
-        markup = kb.scenario_choice()
+        show_resume = bool(data.get("draft_resume_available"))
+        text = messages.welcome(has_saved_questionnaire=show_resume)
+        markup = kb.scenario_choice(show_resume=show_resume)
         await edit_or_send(anchor, text=text, reply_markup=markup, state=state)
         return
     if st == Q.result:

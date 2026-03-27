@@ -9,15 +9,21 @@ from app.keyboards.common import attach_nav, nav_rows
 DOC_KEYS = ("death", "unit", "kin", "all", "none", "what")
 
 
-def scenario_choice() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+def scenario_choice(*, show_resume: bool = False) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    if show_resume:
+        rows.append(
+            [InlineKeyboardButton(text="▶️ Продолжить незавершённую анкету", callback_data="draft:resume")]
+        )
+    rows.extend(
+        [
             [InlineKeyboardButton(text="Узнать, какие выплаты положены", callback_data="sc:first")],
             [InlineKeyboardButton(text="Получить консультацию", callback_data="sc:filed")],
             [InlineKeyboardButton(text="Прояснить ситуацию", callback_data="qz:clarify")],
             [InlineKeyboardButton(text="Рассчитать выплаты", callback_data="qz:calc")],
         ]
     )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def deceased_status() -> InlineKeyboardMarkup:

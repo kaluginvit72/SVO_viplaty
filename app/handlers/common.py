@@ -71,6 +71,40 @@ SU_MAP = {
 WT_MAP = {"w1": 1, "w2": 2, "w4": 4, "w6": 6}
 
 
+@router.callback_query(StateFilter(Q.choose_scenario), F.data == "draft:resume")
+async def resume_questionnaire_draft(call: CallbackQuery, state: FSMContext, repo: LeadRepository) -> None:
+    await call.answer()
+    if not call.from_user or not call.message:
+        return
+    uid = call.from_user.id
+    u = call.from_user
+    record = await repo.get_incomplete(uid)
+    if not record or not record.wizard_state or not record.scenario:
+        await state.update_data(draft_resume_available=False)
+        await _go(call.message, state, repo, uid, Q.choose_scenario)
+        return
+    st = state_from_key(record.wizard_state)
+    if not st or st == Q.choose_scenario:
+        await state.update_data(draft_resume_available=False)
+        await _go(call.message, state, repo, uid, Q.choose_scenario)
+        return
+    merged = progress_service.restore_fsm_from_lead(record)
+    merged.update(
+        {
+            "telegram_user_id": uid,
+            "telegram_username": u.username,
+            "draft_resume_available": False,
+        }
+    )
+    mid = (await state.get_data()).get("ui_message_id")
+    if mid is not None:
+        merged["ui_message_id"] = mid
+    await state.set_data(merged)
+    await state.set_state(st)
+    await show_step(call.message, state, st)
+    await _persist(state, repo, uid)
+
+
 @router.callback_query(StateFilter(Q.choose_scenario), F.data.startswith("sc:"))
 async def pick_scenario(call: CallbackQuery, state: FSMContext, repo: LeadRepository) -> None:
     if not call.from_user or not call.message:
