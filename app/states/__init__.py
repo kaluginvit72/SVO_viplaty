@@ -1,3 +1,3 @@
-from app.states.questionnaire import QuestionnaireStates, state_from_key
+from app.states.questionnaire import Q
 
-__all__ = ["QuestionnaireStates", "state_from_key"]
+__all__ = ["Q"]
