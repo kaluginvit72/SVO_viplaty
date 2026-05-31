@@ -83,8 +83,8 @@ jobs:
       - name: Run remote deploy
         uses: appleboy/ssh-action@v1.2.0
         env:
-          GHCR_USER: ${{ secrets.GHCR_USERNAME }}
-          GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE: ghcr.io/kaluginvit72/svo_viplaty
         with:
           host: ${{ secrets.SSH_HOST }}
