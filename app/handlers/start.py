@@ -9,77 +9,41 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from app.handlers.render import show_step
-from app.repositories.lead_repository import LeadRepository
-from app.services import progress_service
-from app.states.questionnaire import QuestionnaireStates as Q, state_from_key
+from app.keyboards import questionnaire as kb
+from app.states.questionnaire import Q
 from app.texts import messages
 
 log = logging.getLogger(__name__)
 router = Router()
 
 
-def _user_meta(message: Message) -> dict:
-    u = message.from_user
-    if not u:
-        return {}
-    return {
-        "telegram_user_id": u.id,
-        "telegram_username": u.username,
-    }
-
-
-async def _sync(state: FSMContext, repo: LeadRepository, uid: int) -> None:
-    d = await state.get_data()
-    st = await state.get_state()
-    await progress_service.sync_progress_with_state(repo, uid, data=d, fsm_state=st)
-
-
 @router.message(CommandStart(), F.chat.type == "private")
-async def cmd_start(
-    message: Message,
-    state: FSMContext,
-    repo: LeadRepository,
-) -> None:
+async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
-    meta = _user_meta(message)
-    uid = meta.get("telegram_user_id")
-    if uid is None:
-        return
+    if message.from_user:
+        await state.update_data(
+            telegram_user_id=message.from_user.id,
+            telegram_username=message.from_user.username,
+        )
+    msg = await message.answer(messages.welcome(), reply_markup=kb.start_kb(), parse_mode="HTML")
+    await state.update_data(ui_message_id=msg.message_id)
+    await state.set_state(Q.quiz_status)
+    log.info("start user=%s", message.from_user.id if message.from_user else "?")
 
-    record = await repo.get_incomplete(uid)
-    resume_later = False
-    if record and record.wizard_state and record.scenario:
-        st = state_from_key(record.wizard_state)
-        if st and st != Q.choose_scenario:
-            resume_later = True
 
-    await state.update_data(**meta, draft_resume_available=resume_later)
-    await state.set_state(Q.choose_scenario)
-    await show_step(message, state, Q.choose_scenario)
-    await _sync(state, repo, uid)
-    log.info("start user=%s", uid)
+@router.message(Command("restart"), F.chat.type == "private")
+async def cmd_restart(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    if message.from_user:
+        await state.update_data(
+            telegram_user_id=message.from_user.id,
+            telegram_username=message.from_user.username,
+        )
+    msg = await message.answer(messages.welcome(), reply_markup=kb.start_kb(), parse_mode="HTML")
+    await state.update_data(ui_message_id=msg.message_id)
+    await state.set_state(Q.quiz_status)
 
 
 @router.message(Command("help"), F.chat.type == "private")
 async def cmd_help(message: Message) -> None:
     await message.answer(messages.help_text(), parse_mode="HTML")
-
-
-@router.message(Command("restart"), F.chat.type == "private")
-async def cmd_restart(
-    message: Message,
-    state: FSMContext,
-    repo: LeadRepository,
-) -> None:
-    await state.clear()
-    meta = _user_meta(message)
-    uid = meta.get("telegram_user_id")
-    if uid is not None:
-        await repo.delete_incomplete(uid)
-    await state.update_data(**meta)
-    await state.set_state(Q.choose_scenario)
-    await show_step(message, state, Q.choose_scenario)
-    if uid is not None:
-        await _sync(state, repo, uid)
-    log.info("restart user=%s", uid)
